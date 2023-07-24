@@ -1,0 +1,184 @@
+create table person(
+	id int IDENTITY(1,1) PRIMARY KEY,
+	identification nvarchar(50) NOT NULL, 
+    name nvarchar(50) NOT NULL,  
+    lastName nvarchar(50) NOT NULL, 
+    address nvarchar(50),
+    dateBirth date,
+    salary DECIMAL (10, 2),
+	favoriteNumber int
+)
+
+select * from person where identification like '%0931147284%'
+--------------------------------
+
+---SP CONSULTA---
+USE [BD_JOSESANCHEZ_Lanec]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_con_clientes]    Script Date: 24/07/2023 16:24:59 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[sp_con_clientes]( 
+@opcion VARCHAR(2), 
+@id											INT=NULL, 
+@Identificacion                             VARCHAR (40)=NULL, 
+@DatoBusqueda									VARCHAR (255)=NULL) 
+AS 
+  BEGIN 
+
+      BEGIN TRAN con_clientes 
+      IF @opcion='AA' 
+      BEGIN 
+        SELECT 
+				Id,
+				Nombres,
+				Apellidos,
+				Identificacion,
+				Direccion,
+				Correo ,
+				Telefono
+		FROM Clientes
+      END 
+	  IF @opcion='AB' 
+      BEGIN 
+        SELECT 
+				Id,
+				Nombres,
+				Apellidos,
+				Identificacion,
+				Direccion,
+				Correo ,
+				Telefono
+		FROM Clientes where Id = @Id
+      END 
+      IF @opcion='AC' 
+      BEGIN 
+        SELECT 
+				Id,
+				Nombres,
+				Apellidos,
+				Identificacion,
+				Direccion,
+				Correo ,
+				Telefono
+		FROM Clientes where Identificacion = @Identificacion
+      END 
+	  IF @opcion='AD' 
+      BEGIN 
+        SELECT 
+				Id,
+				Nombres,
+				Apellidos,
+				Identificacion,
+				Direccion,
+				Correo ,
+				Telefono
+		FROM Clientes 
+		WHERE Nombres LIKE '%' + @DatoBusqueda + '%'
+                OR Apellidos LIKE '%' + @DatoBusqueda + '%'
+                OR Direccion LIKE '%' + @DatoBusqueda + '%'
+				OR Identificacion LIKE '%' + @DatoBusqueda + '%'
+				OR Correo LIKE '%' + @DatoBusqueda + '%'
+
+      END 
+      COMMIT TRAN con_clientes 
+
+
+  END
+-------------------------------------------------
+---SP REGISTRO ACT Y BORRRADO
+
+USE [BD_JOSESANCHEZ_Lanec]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_trx_clientes]    Script Date: 24/07/2023 16:26:07 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ ALTER PROCEDURE [dbo].[sp_trx_clientes]( 
+@opcion VARCHAR(2), 
+@id											INT=NULL, 
+@Nombres									VARCHAR (40)=NULL, 
+@Apellidos									VARCHAR (40)=NULL, 
+@Identificacion                             VARCHAR (40)=NULL, 
+@Direccion									Text=NULL, 
+@Correo										VARCHAR (40)=NULL,
+@Telefono									VARCHAR (40)=NULL,
+@ctrl                                       INT output, 
+@msj_ctrl                                   VARCHAR(500) output, 
+@dato_1                                     VARCHAR(500) output, 
+@dato_2                                     VARCHAR(500) output) 
+AS 
+  BEGIN 
+    BEGIN try 
+      BEGIN TRAN trx_clientes 
+      IF @opcion='AA' 
+      BEGIN 
+        INSERT INTO Clientes 
+                    ( 
+                        Nombres,
+						Apellidos,
+						Identificacion,
+						Direccion,
+						Correo ,
+						Telefono
+                    ) 
+                    VALUES 
+                    ( 
+                        @Nombres,
+						@Apellidos,
+						@Identificacion,
+						@Direccion,
+						@Correo ,
+						@Telefono 
+                    ) 
+  
+        SET @ctrl=7 
+        SET @msj_ctrl = 'Se ha insertado cliente ' 
+        SET @dato_1 = SCOPE_IDENTITY()
+        SET @dato_2 = SCOPE_IDENTITY()
+      END 
+      IF @opcion='AB' 
+      BEGIN 
+        UPDATE Clientes 
+        SET Nombres = @Nombres,
+			Apellidos = @Apellidos,
+			Identificacion = @Identificacion,
+			Direccion = @Direccion,
+			Correo  = @Correo,
+			Telefono  = @Telefono
+        WHERE  id = @id 
+      
+        SET @ctrl=7 
+        SET @msj_ctrl = 'Se ha realizado la Modificacion de cliente ' 
+        SET @dato_1 = @id 
+        SET @dato_2 = @id
+      END 
+	  IF @opcion='AC' 
+      BEGIN 
+        DELETE FROM Clientes WHERE  id = @id 
+      
+        SET @ctrl=7 
+        SET @msj_ctrl = 'Se ha Borrado de cliente ' 
+        SET @dato_1 = @id 
+        SET @dato_2 = @id
+      END 
+      COMMIT TRAN trx_clientes 
+    END try 
+    BEGIN catch 
+      SET @ctrl = 6 
+      SET @msj_ctrl = 'ERROR EN PROCEDIMIENTO sp_trx_clientes ' + CONVERT(VARCHAR(10), Error_line()) + ' ' + Error_message()
+      SELECT Error_number()    AS errNumber , 
+             Error_severity()  AS errSeverity , 
+             Error_state()     AS errState , 
+             Error_procedure() AS errProcedure , 
+             Error_line()      AS errLine , 
+             Error_message()   AS errMessage , 
+             @ctrl             AS ctrl , 
+             @msj_ctrl         AS msj_ctrl 
+      SET @dato_1 = '6' 
+      SET @dato_2 = '6' ROLLBACK TRAN trx_nm_departamento 
+    END catch 
+  END
